@@ -119,11 +119,12 @@
             opacity: 0.8;
         }
 
+        /* Обновленные стили терминала: чуть выше и у́же */
         .console-container {
-            height: 80px; /* Компактная консоль */
+            height: 115px; /* Увеличено с 80px до 115px (повыше) */
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 2px;
             flex-shrink: 0;
             transition: all 0.2s ease;
         }
@@ -132,9 +133,10 @@
             flex: 1;
             background-color: #050811;
             border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 6px;
-            font-size: 10px;
+            border-radius: 6px;
+            padding: 4px 6px; /* Компактные узкие отступы */
+            font-size: 9.5px; /* Чуть более компактный шрифт */
+            line-height: 1.2;  /* Узкий межстрочный интервал */
             overflow-y: auto;
             color: #a7f3d0;
             white-space: pre-wrap;
@@ -205,7 +207,10 @@
             cursor: pointer;
             padding: 4px;
         }
-        .close-modal-btn:hover { color: var(--text-color); }
+
+        .close-modal-btn:hover {
+            color: var(--text-color);
+        }
 
         /* Плавающая кнопка-стрелочка для повторного открытия модалки победы */
         #toggle-win-btn {
@@ -228,6 +233,7 @@
             justify-content: center;
             transition: transform 0.2s;
         }
+
         #toggle-win-btn:active {
             transform: scale(0.9);
         }
@@ -253,7 +259,7 @@ def solution():
 </textarea>
     <!-- Плавающая кнопка для открытия/скрытия окна победы -->
     <button id="toggle-win-btn" onclick="toggleWinModal()" title="Открыть результат победы">🎉</button>
-    
+
     <button id="run-btn" onclick="runPython()">
         <span>▶ EXECUTE CODE</span>
     </button>
@@ -320,9 +326,16 @@ def solution():
     }
 
     // Инициализация Pyodide и загрузка скрытого декоратора
+    let stdoutBuffer = []; // Массив для сбора логов print()
+
     async function initPyodide() {
         try {
-            pyodide = await loadPyodide();
+            // Настраиваем перехват print() в массив stdoutBuffer
+            pyodide = await loadPyodide({
+                stdout: (text) => {
+                    stdoutBuffer.push(text);
+                }
+            });
 
             await pyodide.runPythonAsync(`
 import sys
@@ -331,6 +344,7 @@ import types
 secret_module = types.ModuleType("secret_guard")
 
 class BaseGuest:
+    """Базовый класс гостя. Должен содержать список 'inventory'."""
     pass
 
 secret_module.BaseGuest = BaseGuest
@@ -379,12 +393,10 @@ sys.modules["secret_guard"] = secret_module
     async function runPython() {
         if (!pyodide) return;
 
-        // При новом запуске тоже сбрасываем старый статус победы
         resetWinState();
-
-        // Убираем фокус с клавиатуры при запуске
         codeTextarea.blur();
 
+        stdoutBuffer = []; // Очищаем буфер принтов
         consoleEl.className = "console";
         consoleEl.innerText = "Выполнение...";
         const userCode = codeTextarea.value;
@@ -397,16 +409,28 @@ sys.modules["secret_guard"] = secret_module
                 throw new Error("Решение неверное: функция solution() должна возвращать победную строку!");
             }
 
-            // Устанавливаем флаг победы
             isWon = true;
 
-            consoleEl.innerText = ">> SUCCESS: " + result;
-            consoleEl.classList.add("success");
-            
+            // Очищаем консоль
+            consoleEl.innerHTML = "";
+
+            // 1. Выводим print() белым цветом
+            if (stdoutBuffer.length > 0) {
+                const printSpan = document.createElement("div");
+                printSpan.style.color = "#f8fafc"; // Белый текст для print()
+                printSpan.textContent = stdoutBuffer.join("\n");
+                consoleEl.appendChild(printSpan);
+            }
+
+            // 2. Выводим успех зелёным цветом
+            const successSpan = document.createElement("div");
+            successSpan.className = "success";
+            successSpan.textContent = ">> SUCCESS: " + result;
+            consoleEl.appendChild(successSpan);
+
             confetti({particleCount: 100, spread: 70, origin: {y: 0.6}});
             document.getElementById('loot-message').innerText = result;
-            
-            // Показываем модалку и плавающую кнопку-стрелочку
+
             setTimeout(() => {
                 winModal.style.display = 'flex';
                 toggleWinBtn.style.display = 'flex';
@@ -415,8 +439,23 @@ sys.modules["secret_guard"] = secret_module
         } catch (err) {
             let errLines = err.message.trim().split('\n');
             let lastError = errLines[errLines.length - 1];
-            consoleEl.innerText = ">> " + lastError;
-            consoleEl.classList.add("err");
+
+            // Очищаем консоль
+            consoleEl.innerHTML = "";
+
+            // 1. Выводим print() белым цветом
+            if (stdoutBuffer.length > 0) {
+                const printSpan = document.createElement("div");
+                printSpan.style.color = "#f8fafc"; // Белый текст для print()
+                printSpan.textContent = stdoutBuffer.join("\n");
+                consoleEl.appendChild(printSpan);
+            }
+
+            // 2. Выводим ошибку красным цветом
+            const errSpan = document.createElement("div");
+            errSpan.className = "err";
+            errSpan.textContent = ">> " + lastError;
+            consoleEl.appendChild(errSpan);
         }
     }
 
