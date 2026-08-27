@@ -6,11 +6,11 @@
           content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Dev Birthday Quest</title>
     <!-- Telegram WebApp SDK -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Pyodide (Python в браузере) -->
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js?v=1.0.1"></script>
+    <!-- Pyodide (Python в браузере) с версией от кэша -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js?v=1.0.1"></script>
     <!-- Canvas Confetti для победного салюта -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js?v=1.0.1"></script>
 
     <style>
         :root {
@@ -67,6 +67,7 @@
             flex: 1;
             gap: 4px;
             min-height: 0; /* Разрешает flex-элементу сжиматься */
+            position: relative;
         }
 
         label {
@@ -177,6 +178,7 @@
             padding: 24px;
             border-radius: 12px;
             box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+            position: relative;
         }
 
         .modal h2 {
@@ -189,6 +191,45 @@
             line-height: 1.5;
             color: #e2e8f0;
             margin-bottom: 8px;
+        }
+
+        /* Кнопка закрытия модалки крестиком */
+        .close-modal-btn {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .close-modal-btn:hover { color: var(--text-color); }
+
+        /* Плавающая кнопка-стрелочка для повторного открытия модалки победы */
+        #toggle-win-btn {
+            display: none;
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: var(--success-color);
+            color: #0f172a;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(74, 222, 128, 0.4);
+            z-index: 50;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        #toggle-win-btn:active {
+            transform: scale(0.9);
         }
     </style>
 </head>
@@ -210,6 +251,9 @@ def solution():
     # Начни отсюда: перехватывай исключения или передавай аргументы
     return get_birthday_loot()
 </textarea>
+    <!-- Плавающая кнопка для открытия/скрытия окна победы -->
+    <button id="toggle-win-btn" onclick="toggleWinModal()" title="Открыть результат победы">🎉</button>
+    
     <button id="run-btn" onclick="runPython()">
         <span>▶ EXECUTE CODE</span>
     </button>
@@ -223,6 +267,7 @@ def solution():
 <!-- Модалка с победой -->
 <div id="win-modal" class="modal">
     <div class="modal-content">
+        <button class="close-modal-btn" onclick="closeWinModal()">✕</button>
         <h2>🎉 SYSTEM UNLOCKED!</h2>
         <p id="loot-message"></p>
         <hr style="border-color: #334155; margin: 12px 0;">
@@ -234,8 +279,23 @@ def solution():
 
 <script>
     let pyodide = null;
+    let isWon = false; // Флаг победы
     const consoleEl = document.getElementById('console');
     const codeTextarea = document.getElementById('code');
+    const toggleWinBtn = document.getElementById('toggle-win-btn');
+    const winModal = document.getElementById('win-modal');
+
+    // Функция сброса состояния победы при изменении кода
+    function resetWinState() {
+        if (isWon) {
+            isWon = false;
+            winModal.style.display = 'none';
+            toggleWinBtn.style.display = 'none';
+        }
+    }
+
+    // Сбрасываем победу при любых изменениях в текстовом поле
+    codeTextarea.addEventListener('input', resetWinState);
 
     // Скрываем хедер при фокусе в редакторе для максимального пространства
     codeTextarea.addEventListener('focus', () => {
@@ -245,6 +305,19 @@ def solution():
     codeTextarea.addEventListener('blur', () => {
         document.body.classList.remove('editing');
     });
+
+    // Управление модалкой победы
+    function closeWinModal() {
+        winModal.style.display = 'none';
+    }
+
+    function toggleWinModal() {
+        if (winModal.style.display === 'flex') {
+            winModal.style.display = 'none';
+        } else {
+            winModal.style.display = 'flex';
+        }
+    }
 
     // Инициализация Pyodide и загрузка скрытого декоратора
     async function initPyodide() {
@@ -264,7 +337,6 @@ secret_module.BaseGuest = BaseGuest
 
 def _secret_decorator(func):
     def wrapper(*args, **kwargs):
-        # Используем минималистичные проверки без текстов ошибок, выдающих логику
         if not (kwargs.get('user') if 'user' in kwargs else (args[0] if args else None)):
             raise TypeError("ERR_01")
 
@@ -279,7 +351,6 @@ def _secret_decorator(func):
         if not hasattr(u, 'get_passcode') or not callable(u.get_passcode):
             raise AttributeError("ERR_04")
 
-        # Проверка кода через математику/длину, без зашитых строк-подсказок в co_consts
         val = str(u.get_passcode())
         if len(val) != 9 or val[:5] != "PARTY" or val[5:] != "2026":
             raise PermissionError("ERR_05")
@@ -309,6 +380,9 @@ sys.modules["secret_guard"] = secret_module
     async function runPython() {
         if (!pyodide) return;
 
+        // При новом запуске тоже сбрасываем старый статус победы
+        resetWinState();
+
         // Убираем фокус с клавиатуры при запуске
         codeTextarea.blur();
 
@@ -320,18 +394,23 @@ sys.modules["secret_guard"] = secret_module
             await pyodide.runPythonAsync(userCode);
             let result = await pyodide.runPythonAsync("solution()");
 
-            // Проверяем: вернула ли функция победную строку, а не просто пустой print()
             if (typeof result !== 'string' || !result.includes("С Днем Рождения")) {
                 throw new Error("Решение неверное: функция solution() должна возвращать победную строку!");
             }
 
-            // Если всё ок — победа!
+            // Устанавливаем флаг победы
+            isWon = true;
+
             consoleEl.innerText = ">> SUCCESS: " + result;
             consoleEl.classList.add("success");
+            
             confetti({particleCount: 100, spread: 70, origin: {y: 0.6}});
             document.getElementById('loot-message').innerText = result;
+            
+            // Показываем модалку и плавающую кнопку-стрелочку
             setTimeout(() => {
-                document.getElementById('win-modal').style.display = 'flex';
+                winModal.style.display = 'flex';
+                toggleWinBtn.style.display = 'flex';
             }, 500);
 
         } catch (err) {
@@ -340,12 +419,12 @@ sys.modules["secret_guard"] = secret_module
             consoleEl.innerText = ">> " + lastError;
             consoleEl.classList.add("err");
         }
+    }
 
-        // Инициализация Telegram WebApp
-        if (window.Telegram && window.Telegram.WebApp) {
-            window.Telegram.WebApp.ready();
-            window.Telegram.WebApp.expand();
-        }
+    // Инициализация Telegram WebApp
+    if (window.Telegram && window.Telegram.WebApp) {
+        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.expand();
     }
 </script>
 </body>
