@@ -136,7 +136,7 @@
             border-radius: 6px;
             padding: 4px 6px; /* Компактные узкие отступы */
             font-size: 9.5px; /* Чуть более компактный шрифт */
-            line-height: 1.2;  /* Узкий межстрочный интервал */
+            line-height: 1.2; /* Узкий межстрочный интервал */
             overflow-y: auto;
             color: #a7f3d0;
             white-space: pre-wrap;
@@ -278,7 +278,7 @@ def solution():
         <p id="loot-message"></p>
         <hr style="border-color: #334155; margin: 12px 0;">
         <p style="color: #94a3b8; font-size: 11px;">
-            📦 <b>Физический лут:</b> Находится в инвентаре у автора. Доставка при встрече!
+            📦 <b>Физический лут:</b> Передам в живую :)
         </p>
     </div>
 </div>
@@ -344,29 +344,45 @@ import types
 secret_module = types.ModuleType("secret_guard")
 
 class BaseGuest:
-    """Базовый класс гостя. Должен содержать список 'inventory'."""
+    """Базовый класс гостя. Содержит список inventory"""
     pass
 
+# Скрытые константы в модуле
 secret_module.BaseGuest = BaseGuest
-
+secret_module._CITY_CODES = [83, 80, 66]
+secret_module._CALC = lambda age: (45**2 + 1) + 12347 * (age - 17) + 56789 * ((age - 17)**2)
 def _secret_decorator(func):
     def wrapper(*args, **kwargs):
         u = kwargs.get('user') if 'user' in kwargs else (args[0] if args else None)
         if not u:
-            raise TypeError("[ERR_01] SystemError: null reference exception in core dispatch table. Argument 'user' evaluated to None.")
+            raise TypeError("[ERR_01] SystemError: null reference exception. Argument 'user' evaluated to None. :(")
 
         if not isinstance(u, BaseGuest):
-            raise TypeError(f"[ERR_02] TypeError: memory layout violation. Expected subclass of <class 'BaseGuest'>, received <class '{type(u).__name__}'>.")
+            raise TypeError(f"[ERR_02] TypeError: memory layout violation. Expected subclass of <class 'BaseGuest'>, received <class '{type(u).__name__}'>. :/")
 
-        if not hasattr(u, 'inventory') or "cake" not in u.inventory:
-            raise LookupError("[ERR_03] OutOfBoundsException: target buffer missing mandatory asset descriptor -> 'cake'.")
+        if not hasattr(u, 'inventory') or "pyshka" not in u.inventory:
+            raise LookupError("[ERR_03] OutOfBoundsException: target buffer missing mandatory asset descriptor -> 'pyshka'. :)")
+
+        if not hasattr(u, 'date'):
+            raise AttributeError("[ERR_04] AttributeError: missing mandatory string attribute 'date' (e.g. format 'YYYY-MM-DD'). :_(")
+
+        if not isinstance(u.date, bool) or u.date is not True:
+            raise TypeError(f"[ERR_05] SchemaValidationError: attribute 'date' expected boolean flag True, received {type(u.date).__name__}. Gotcha! :_)")
 
         if not hasattr(u, 'get_passcode') or not callable(u.get_passcode):
-            raise NotImplementedError("[ERR_04] SystemError: virtual method table corruption. Missing callable signature 'get_passcode()'.")
+            raise NotImplementedError("[ERR_06] SystemError: virtual method table corruption. Missing callable signature 'get_passcode()'. :/")
 
         val = str(u.get_passcode())
-        if len(val) != 9 or val[:5] != "PARTY" or val[5:] != "2026":
-            raise PermissionError("[ERR_05] SecurityViolationException: cryptographic token hash mismatch. Access credentials invalid.")
+
+        # Строгая подсказка про длину = 7 и отсылка к константам модуля
+        if len(val) != 7:
+            raise PermissionError("[ERR_07] SecurityViolationException: invalid auth token structure. Token length must be 7 characters. Look into module constants for hash keys. :(")
+
+        expected_prefix = "".join([chr(x) for x in secret_module._CITY_CODES])
+        expected_token = f"{expected_prefix}{secret_module._CALC(17)}"
+
+        if val != expected_token:
+            raise PermissionError("[ERR_08] SecurityViolationException: token hash mismatch. Access credentials invalid. Check secret_guard module attributes! :(")
 
         return func(*args, **kwargs)
 
@@ -374,7 +390,8 @@ def _secret_decorator(func):
 
 @_secret_decorator
 def get_birthday_loot(user=None):
-    return "С Днем Рождения! 🎉 Защита пробита, вот твой лут: [ССЫЛКА]!"
+    url = "https://telegra.ph/100-SUCCESS-08-27"
+    return f'С Днем Рождения! 🎉 Защита пробита!\\n\\n👉 <a href="{url}">Читать поздравление</a>'
 
 secret_module.get_birthday_loot = get_birthday_loot
 sys.modules["secret_guard"] = secret_module
