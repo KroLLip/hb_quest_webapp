@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dev Birthday Quest</title>
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Pyodide (Python в браузере) -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+    <!-- Canvas Confetti для победного салюта -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --err-color: #f87171;
+            --success-color: #4ade80;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 8px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid #334155;
+        }
+
+        .header h1 {
+            font-size: 16px;
+            color: var(--accent-color);
+        }
+
+        .header p {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 11px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        textarea {
+            width: 100%;
+            flex: 1;
+            background-color: #090d16;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 12px;
+            line-height: 1.4;
+            resize: none;
+            outline: none;
+            white-space: pre;
+            tab-size: 4;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-color);
+        }
+
+        button {
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:active {
+            opacity: 0.8;
+        }
+
+        .console-container {
+            height: 140px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .console {
+            flex: 1;
+            background-color: #050811;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 11px;
+            overflow-y: auto;
+            color: #a7f3d0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .err { color: var(--err-color); }
+        .success { color: var(--success-color); }
+
+        /* Модальное окно победы */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.95);
+            z-index: 100;
+            padding: 24px;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            gap: 16px;
+        }
+
+        .modal-content {
+            background: var(--panel-bg);
+            border: 1px solid var(--accent-color);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+        }
+
+        .modal h2 { color: var(--accent-color); margin-bottom: 12px; }
+        .modal p { font-size: 13px; line-height: 1.5; color: #e2e8f0; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🔒 DEBUG QUEST: UNLOCK LOOT</h1>
+        <p>Отладить закрытый вызов функции и обойти защиту сервера</p>
+    </div>
+
+    <div class="editor-container">
+        <label>solution.py</label>
+        <textarea id="code" spellcheck="false"># Напиши свой код отладки ниже.
+# Главная цель: вызвать get_birthday_loot(...) без ошибок!
+
+from secret_guard import get_birthday_loot
+
+def solution():
+    # Начни отсюда: перехватывай исключения или передавай аргументы
+    return get_birthday_loot()
+</textarea>
+        <button id="run-btn" onclick="runPython()">
+            <span>▶ EXUTE CODE</span>
+        </button>
+    </div>
+
+    <div class="console-container">
+        <label>Terminal / Stdout & Stderr</label>
+        <div id="console" class="console">Инициализация Python среды...</div>
+    </div>
+
+    <!-- Модалка с победой -->
+    <div id="win-modal" class="modal">
+        <div class="modal-content">
+            <h2>🎉 SYSTEM UNLOCKED!</h2>
+            <p id="loot-message"></p>
+            <hr style="border-color: #334155; margin: 12px 0;">
+            <p style="color: #94a3b8; font-size: 11px;">
+                📦 <b>Физический лут:</b> Находится в инвентаре у автора. Доставка при встрече!
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let pyodide = null;
+        const consoleEl = document.getElementById('console');
+        const runBtn = document.getElementById('run-btn');
+
+        // Инициализация Pyodide и загрузка скрытого декоратора
+        async function initPyodide() {
+            try {
+                pyodide = await loadPyodide();
+
+                // Вшиваем СКРЫТЫЙ модуль secret_guard прямо в виртуальную ФС Pyodide
+                await pyodide.runPythonAsync(`
+import sys
+import types
+
+# Создаем виртуальный модуль secret_guard
+secret_module = types.ModuleType("secret_guard")
+
+def _secret_decorator(func):
+    def wrapper(*args, **kwargs):
+        # 1. Проверка наличия аргумента 'user'
+        if 'user' not in kwargs and len(args) == 0:
+            raise TypeError("get_birthday_loot() missing 1 required argument: 'user'")
+
+        user = kwargs.get('user') if 'user' in kwargs else args[0]
+
+        # 2. Проверка атрибута/метода is_best_friend
+        if not hasattr(user, 'is_best_friend'):
+            raise AttributeError(f"'{type(user).__name__}' object has no attribute 'is_best_friend'")
+
+        is_friend_attr = getattr(user, 'is_best_friend')
+        is_friend = is_friend_attr() if callable(is_friend_attr) else is_friend_attr
+
+        if not is_friend:
+            raise PermissionError("Access Denied: user.is_best_friend must be True!")
+
+        # 3. Проверка локации / дистанции
+        if not hasattr(user, 'location'):
+            raise AttributeError(f"'{type(user).__name__}' object has no attribute 'location'")
+
+        if getattr(user, 'location') != 'here' and getattr(user, 'location') != 0:
+            raise PermissionError("Access Denied: user.location must be 'here' or 0!")
+
+        # Если все проверки пройдены:
+        return "С Днем Рождения! 🎉 Твой цифровой подарок: [Тут твоя ссылка/поздравление]!"
+
+    return wrapper
+
+@_secret_decorator
+def get_birthday_loot(*args, **kwargs):
+    pass
+
+secret_module.get_birthday_loot = get_birthday_loot
+sys.modules["secret_guard"] = secret_module
+`);
+
+                consoleEl.innerText = "Python готов! Нажмите [EXECUTE CODE] для старта.";
+                consoleEl.classList.add("success");
+            } catch (err) {
+                consoleEl.innerText = "Ошибка загрузки Python: " + err;
+                consoleEl.classList.add("err");
+            }
+        }
+
+        initPyodide();
+
+        async function runPython() {
+            if (!pyodide) return;
+
+            consoleEl.className = "console";
+            consoleEl.innerText = "Выполнение...";
+            const userCode = document.getElementById('code').value;
+
+            try {
+                // Выполняем код пользователя
+                await pyodide.runPythonAsync(userCode);
+                // Вызываем его функцию solution()
+                let result = await pyodide.runPythonAsync("solution()");
+
+                // Если успешно вызвалось и вернуло результат
+                consoleEl.innerText = ">> SUCCESS: " + result;
+                consoleEl.classList.add("success");
+
+                // Запускаем победные салюты и модалку
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                document.getElementById('loot-message').innerText = result;
+                setTimeout(() => {
+                    document.getElementById('win-modal').style.display = 'flex';
+                }, 500);
+
+            } catch (err) {
+                // Извлекаем чистую ошибку Python из Traceback
+                let errLines = err.message.trim().split('\n');
+                let lastError = errLines[errLines.length - 1];
+                consoleEl.innerText = ">> " + lastError;
+                consoleEl.classList.add("err");
+            }
+        }
+
+        // Инициализация Telegram WebApp
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+        }
+    </script>
+</body>
+</html>
