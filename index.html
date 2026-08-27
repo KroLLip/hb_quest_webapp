@@ -391,7 +391,7 @@ def _secret_decorator(func):
 @_secret_decorator
 def get_birthday_loot(user=None):
     url = "https://telegra.ph/100-SUCCESS-08-27"
-    return f'С Днем Рождения! 🎉 Защита пробита!\\n\\n👉 <a href="{url}">Читать поздравление</a>'
+    return f'С Днем Рождения! 🎉 Защита пробита!<br><br>👉 <a href="{url}" target="_blank" style="color: #38bdf8; text-decoration: underline;">Читать поздравление</a>'
 
 secret_module.get_birthday_loot = get_birthday_loot
 sys.modules["secret_guard"] = secret_module
@@ -446,8 +446,7 @@ sys.modules["secret_guard"] = secret_module
             consoleEl.appendChild(successSpan);
 
             confetti({particleCount: 100, spread: 70, origin: {y: 0.6}});
-            document.getElementById('loot-message').innerText = result;
-
+            document.getElementById('loot-message').innerHTML = result;
             setTimeout(() => {
                 winModal.style.display = 'flex';
                 toggleWinBtn.style.display = 'flex';
