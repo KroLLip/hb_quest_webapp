@@ -337,23 +337,22 @@ secret_module.BaseGuest = BaseGuest
 
 def _secret_decorator(func):
     def wrapper(*args, **kwargs):
-        if not (kwargs.get('user') if 'user' in kwargs else (args[0] if args else None)):
-            raise TypeError("ERR_01")
-
-        u = kwargs.get('user') if 'user' in kwargs else args[0]
+        u = kwargs.get('user') if 'user' in kwargs else (args[0] if args else None)
+        if not u:
+            raise TypeError("[ERR_01] SystemError: null reference exception in core dispatch table. Argument 'user' evaluated to None.")
 
         if not isinstance(u, BaseGuest):
-            raise TypeError("ERR_02")
+            raise TypeError(f"[ERR_02] TypeError: memory layout violation. Expected subclass of <class 'BaseGuest'>, received <class '{type(u).__name__}'>.")
 
         if not hasattr(u, 'inventory') or "cake" not in u.inventory:
-            raise ValueError("ERR_03")
+            raise LookupError("[ERR_03] OutOfBoundsException: target buffer missing mandatory asset descriptor -> 'cake'.")
 
         if not hasattr(u, 'get_passcode') or not callable(u.get_passcode):
-            raise AttributeError("ERR_04")
+            raise NotImplementedError("[ERR_04] SystemError: virtual method table corruption. Missing callable signature 'get_passcode()'.")
 
         val = str(u.get_passcode())
         if len(val) != 9 or val[:5] != "PARTY" or val[5:] != "2026":
-            raise PermissionError("ERR_05")
+            raise PermissionError("[ERR_05] SecurityViolationException: cryptographic token hash mismatch. Access credentials invalid.")
 
         return func(*args, **kwargs)
 
