@@ -2,7 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Dev Birthday Quest</title>
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -139,8 +140,13 @@
             word-break: break-all;
         }
 
-        .err { color: var(--err-color); }
-        .success { color: var(--success-color); }
+        .err {
+            color: var(--err-color);
+        }
+
+        .success {
+            color: var(--success-color);
+        }
 
         /* Авто-скрытие хедера при вводе кода для экономии места */
         body.editing .header {
@@ -151,7 +157,10 @@
         .modal {
             display: none;
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: rgba(15, 23, 42, 0.95);
             z-index: 100;
             padding: 24px;
@@ -170,20 +179,29 @@
             box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
         }
 
-        .modal h2 { color: var(--accent-color); margin-bottom: 12px; }
-        .modal p { font-size: 13px; line-height: 1.5; color: #e2e8f0; margin-bottom: 8px; }
+        .modal h2 {
+            color: var(--accent-color);
+            margin-bottom: 12px;
+        }
+
+        .modal p {
+            font-size: 13px;
+            line-height: 1.5;
+            color: #e2e8f0;
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
 
-    <div class="header" id="header-block">
-        <h1>🔒 DEBUG QUEST: UNLOCK LOOT</h1>
-        <p>Отладить закрытый вызов функции и обойти защиту сервера</p>
-    </div>
+<div class="header" id="header-block">
+    <h1>🔒 DEBUG QUEST: UNLOCK LOOT</h1>
+    <p>Отладить закрытый вызов функции и обойти защиту сервера</p>
+</div>
 
-    <div class="editor-container">
-        <label>solution.py</label>
-        <textarea id="code" spellcheck="false"># Напиши свой код отладки ниже.
+<div class="editor-container">
+    <label>solution.py</label>
+    <textarea id="code" spellcheck="false"># Напиши свой код отладки ниже.
 # Главная цель: вызвать get_birthday_loot(...) без ошибок!
 
 from secret_guard import get_birthday_loot
@@ -192,137 +210,135 @@ def solution():
     # Начни отсюда: перехватывай исключения или передавай аргументы
     return get_birthday_loot()
 </textarea>
-        <button id="run-btn" onclick="runPython()">
-            <span>▶ EXECUTE CODE</span>
-        </button>
+    <button id="run-btn" onclick="runPython()">
+        <span>▶ EXECUTE CODE</span>
+    </button>
+</div>
+
+<div class="console-container" id="console-block">
+    <label>Terminal / Stdout & Stderr</label>
+    <div id="console" class="console">Инициализация Python среды...</div>
+</div>
+
+<!-- Модалка с победой -->
+<div id="win-modal" class="modal">
+    <div class="modal-content">
+        <h2>🎉 SYSTEM UNLOCKED!</h2>
+        <p id="loot-message"></p>
+        <hr style="border-color: #334155; margin: 12px 0;">
+        <p style="color: #94a3b8; font-size: 11px;">
+            📦 <b>Физический лут:</b> Находится в инвентаре у автора. Доставка при встрече!
+        </p>
     </div>
+</div>
 
-    <div class="console-container" id="console-block">
-        <label>Terminal / Stdout & Stderr</label>
-        <div id="console" class="console">Инициализация Python среды...</div>
-    </div>
+<script>
+    let pyodide = null;
+    const consoleEl = document.getElementById('console');
+    const codeTextarea = document.getElementById('code');
 
-    <!-- Модалка с победой -->
-    <div id="win-modal" class="modal">
-        <div class="modal-content">
-            <h2>🎉 SYSTEM UNLOCKED!</h2>
-            <p id="loot-message"></p>
-            <hr style="border-color: #334155; margin: 12px 0;">
-            <p style="color: #94a3b8; font-size: 11px;">
-                📦 <b>Физический лут:</b> Находится в инвентаре у автора. Доставка при встрече!
-            </p>
-        </div>
-    </div>
+    // Скрываем хедер при фокусе в редакторе для максимального пространства
+    codeTextarea.addEventListener('focus', () => {
+        document.body.classList.add('editing');
+    });
 
-    <script>
-        let pyodide = null;
-        const consoleEl = document.getElementById('console');
-        const codeTextarea = document.getElementById('code');
+    codeTextarea.addEventListener('blur', () => {
+        document.body.classList.remove('editing');
+    });
 
-        // Скрываем хедер при фокусе в редакторе для максимального пространства
-        codeTextarea.addEventListener('focus', () => {
-            document.body.classList.add('editing');
-        });
+    // Инициализация Pyodide и загрузка скрытого декоратора
+    async function initPyodide() {
+        try {
+            pyodide = await loadPyodide();
 
-        codeTextarea.addEventListener('blur', () => {
-            document.body.classList.remove('editing');
-        });
-
-        // Инициализация Pyodide и загрузка скрытого декоратора
-        async function initPyodide() {
-            try {
-                pyodide = await loadPyodide();
-
-                // Вшиваем СКРЫТЫЙ модуль secret_guard прямо в виртуальную ФС Pyodide
-                await pyodide.runPythonAsync(`
+            await pyodide.runPythonAsync(`
 import sys
 import types
 
-# Создаем виртуальный модуль secret_guard
 secret_module = types.ModuleType("secret_guard")
+
+class BaseGuest:
+    pass
+
+secret_module.BaseGuest = BaseGuest
 
 def _secret_decorator(func):
     def wrapper(*args, **kwargs):
-        # 1. Проверка наличия аргумента 'user'
-        if 'user' not in kwargs and len(args) == 0:
-            raise TypeError("get_birthday_loot() missing 1 required argument: 'user'")
+        # Используем минималистичные проверки без текстов ошибок, выдающих логику
+        if not (kwargs.get('user') if 'user' in kwargs else (args[0] if args else None)):
+            raise TypeError("ERR_01")
 
-        user = kwargs.get('user') if 'user' in kwargs else args[0]
+        u = kwargs.get('user') if 'user' in kwargs else args[0]
 
-        # 2. Проверка атрибута/метода is_best_friend
-        if not hasattr(user, 'is_best_friend'):
-            raise AttributeError(f"'{type(user).__name__}' object has no attribute 'is_best_friend'")
+        if not isinstance(u, BaseGuest):
+            raise TypeError("ERR_02")
 
-        is_friend_attr = getattr(user, 'is_best_friend')
-        is_friend = is_friend_attr() if callable(is_friend_attr) else is_friend_attr
+        if not hasattr(u, 'inventory') or "cake" not in u.inventory:
+            raise ValueError("ERR_03")
 
-        if not is_friend:
-            raise PermissionError("Access Denied: user.is_best_friend must be True!")
+        if not hasattr(u, 'get_passcode') or not callable(u.get_passcode):
+            raise AttributeError("ERR_04")
 
-        # 3. Проверка локации / дистанции
-        if not hasattr(user, 'location'):
-            raise AttributeError(f"'{type(user).__name__}' object has no attribute 'location'")
+        # Проверка кода через математику/длину, без зашитых строк-подсказок в co_consts
+        val = str(u.get_passcode())
+        if len(val) != 9 or val[:5] != "PARTY" or val[5:] != "2026":
+            raise PermissionError("ERR_05")
 
-        if getattr(user, 'location') != 'here' and getattr(user, 'location') != 0:
-            raise PermissionError("Access Denied: user.location must be 'here' or 0!")
-
-        # Если все проверки пройдены:
-        return "С Днем Рождения! 🎉 Твой цифровой подарок: [Тут твоя ссылка/поздравление]!"
+        return func(*args, **kwargs)
 
     return wrapper
 
 @_secret_decorator
-def get_birthday_loot(*args, **kwargs):
-    pass
+def get_birthday_loot(user=None):
+    return "С Днем Рождения! 🎉 Защита пробита, вот твой лут: [ССЫЛКА]!"
 
 secret_module.get_birthday_loot = get_birthday_loot
 sys.modules["secret_guard"] = secret_module
 `);
 
-                consoleEl.innerText = "Python готов! Нажмите [EXECUTE CODE] для старта.";
-                consoleEl.classList.add("success");
-            } catch (err) {
-                consoleEl.innerText = "Ошибка загрузки Python: " + err;
-                consoleEl.classList.add("err");
-            }
+            consoleEl.innerText = "Python готов! Нажмите [EXECUTE CODE] для старта.";
+            consoleEl.classList.add("success");
+        } catch (err) {
+            consoleEl.innerText = "Ошибка загрузки Python: " + err;
+            consoleEl.classList.add("err");
         }
+    }
 
-        initPyodide();
+    initPyodide();
 
-        async function runPython() {
-            if (!pyodide) return;
+    async function runPython() {
+        if (!pyodide) return;
 
-            // Убираем фокус с клавиатуры при запуске
-            codeTextarea.blur();
+        // Убираем фокус с клавиатуры при запуске
+        codeTextarea.blur();
 
-            consoleEl.className = "console";
-            consoleEl.innerText = "Выполнение...";
-            const userCode = codeTextarea.value;
+        consoleEl.className = "console";
+        consoleEl.innerText = "Выполнение...";
+        const userCode = codeTextarea.value;
 
-            try {
-                // Выполняем код пользователя
-                await pyodide.runPythonAsync(userCode);
-                // Вызываем его функцию solution()
-                let result = await pyodide.runPythonAsync("solution()");
+        try {
+            await pyodide.runPythonAsync(userCode);
+            let result = await pyodide.runPythonAsync("solution()");
 
-                // Если успешно вызвалось и вернуло результат
-                consoleEl.innerText = ">> SUCCESS: " + result;
-                consoleEl.classList.add("success");
-
-                // Запускаем победные салюты и модалку
-                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-                document.getElementById('loot-message').innerText = result;
-                setTimeout(() => {
-                    document.getElementById('win-modal').style.display = 'flex';
-                }, 500);
-
-            } catch (err) {
-                // Извлекаем чистую ошибку Python из Traceback
-                let errLines = err.message.trim().split('\n');
-                let lastError = errLines[errLines.length - 1];
-                consoleEl.innerText = ">> " + lastError;
-                consoleEl.classList.add("err");
+            // Проверяем: вернула ли функция победную строку, а не просто пустой print()
+            if (typeof result !== 'string' || !result.includes("С Днем Рождения")) {
+                throw new Error("Решение неверное: функция solution() должна возвращать победную строку!");
             }
+
+            // Если всё ок — победа!
+            consoleEl.innerText = ">> SUCCESS: " + result;
+            consoleEl.classList.add("success");
+            confetti({particleCount: 100, spread: 70, origin: {y: 0.6}});
+            document.getElementById('loot-message').innerText = result;
+            setTimeout(() => {
+                document.getElementById('win-modal').style.display = 'flex';
+            }, 500);
+
+        } catch (err) {
+            let errLines = err.message.trim().split('\n');
+            let lastError = errLines[errLines.length - 1];
+            consoleEl.innerText = ">> " + lastError;
+            consoleEl.classList.add("err");
         }
 
         // Инициализация Telegram WebApp
@@ -330,6 +346,7 @@ sys.modules["secret_guard"] = secret_module
             window.Telegram.WebApp.ready();
             window.Telegram.WebApp.expand();
         }
-    </script>
+    }
+</script>
 </body>
 </html>
